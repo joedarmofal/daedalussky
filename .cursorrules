@@ -1,0 +1,45 @@
+# Daedalussky Healthcare Application — Agent Rules
+
+## Product context
+- This repository powers **Daedalussky.com** healthcare experiences built with **Next.js (App Router) + React + TypeScript**.
+- Assume regulated healthcare data may be processed; design and code should stay **HIPAA-conscious** even before formal BAAs and security reviews are complete.
+
+## TypeScript (mandatory)
+- **Strict typing only**: prefer `unknown` over `any`. Never use `any` unless there is an unavoidable interop constraint; if used, isolate behind a typed boundary immediately.
+- Honor `tsconfig.json` strict flags (`strict`, `noUncheckedIndexedAccess`, `noUnusedLocals`, `noUnusedParameters`, `noImplicitReturns`, `useUnknownInCatchVariables`, etc.). Do not relax compiler settings to silence errors.
+- Use explicit function return types for exported/public APIs and server entrypoints.
+- Prefer `import type` for type-only imports; keep server-only modules out of client component graphs.
+- Model external payloads (HL7, FHIR JSON, Google API responses) with **dedicated types** and narrow/validate at boundaries (prefer a single validation layer rather than scattered assertions).
+
+## HIPAA-aligned security & privacy (engineering defaults)
+- **Never log PHI/PII** (names, MRNs, account numbers, DOB, addresses, phone/email, free-text clinical notes, insurance IDs, device identifiers tied to patients, etc.). Treat any patient-linked identifier as sensitive.
+- Use **structured audit logs** without clinical content: event name, non-reversible correlation IDs, coarse outcome (success/failure), and technical metadata only.
+- Do not embed secrets in source. Use environment variables and a secret manager in deployed environments.
+- **Server-side** handling for credentials, service accounts, Google OAuth tokens, and Healthcare API calls. Do not expose GCP keys or OAuth client secrets to the browser.
+- Apply **least privilege** IAM for Google Cloud Healthcare API (FHIR/DICOM/HL7 stores). Prefer workload identity / service accounts over user credentials in production.
+- Encrypt data in transit (HTTPS) and rely on GCP encryption at rest for persisted healthcare data.
+- Minimize data retention in application logs, caches, and error trackers; scrub or avoid attaching request/response bodies that may contain PHI.
+- When adding analytics or third-party scripts, document data flows and avoid patient-identifiable payloads.
+
+## Architecture & folder conventions
+- **HL7 v2 models** live under `src/models/hl7/` in **modular** files:
+  - `types/` — shared primitives and value objects.
+  - `segments/` — one segment per module (e.g. `msh.ts`, `pid.ts`) with an `index.ts` barrel.
+  - `messages/` — composed messages (e.g. ADT, ORU) with an `index.ts` barrel.
+  - Root `src/models/hl7/index.ts` re-exports stable public types only.
+- **Google Cloud Healthcare API** integration code lives under `src/integrations/google-cloud-healthcare/` and must remain **Node/server** compatible (Route Handlers, Server Actions, background jobs). Client components consume only **sanitized DTOs**.
+- Shared non-domain utilities go in `src/lib/`. Cross-cutting security helpers (e.g. safe logging) live under `src/lib/security/`.
+- Prefer small modules, clear boundaries, and tests for parsing/validation of healthcare payloads.
+
+## Next.js / React specifics
+- Default to **Server Components**; add `"use client"` only when necessary.
+- Never pass raw HL7/FHIR or internal identifiers to client props unless explicitly de-identified and approved for that surface.
+- Use Next.js **Route Handlers** or Server Actions for integrations that require secrets.
+
+## Dependencies & APIs
+- When calling Google Cloud Healthcare API, use official maintained clients or generated APIs with version pinning, and handle retries/timeouts deliberately.
+- Document new environment variables in `.env.example` (no real values).
+
+## Testing & quality gates
+- Add or update tests when changing parsing, authorization, or data redaction behavior.
+- Run `npm run lint` and `npm run build` before considering work complete.

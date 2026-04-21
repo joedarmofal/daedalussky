@@ -1,23 +1,21 @@
 import type { ReactElement } from "react";
-
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
-import { LandingExperience } from "@/components/home/LandingExperience";
-import { MissionControlDashboard } from "@/components/mission-control/MissionControlDashboard";
+import { PulseCheckManager } from "@/components/pulse-check/PulseCheckManager";
 import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home(): Promise<ReactElement> {
+export default async function PulseCheckPage(): Promise<ReactElement> {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
   if (!user) {
-    return <LandingExperience />;
+    redirect("/login");
   }
 
-  return <MissionControlDashboard />;
+  return <PulseCheckManager />;
 }

@@ -1,14 +1,13 @@
 import type { ReactElement } from "react";
-
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
-import { LandingExperience } from "@/components/home/LandingExperience";
-import { MissionControlDashboard } from "@/components/mission-control/MissionControlDashboard";
+import { MembersManager } from "@/components/members/MembersManager";
 import { createClient } from "@/utils/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home(): Promise<ReactElement> {
+export default async function MembersPage(): Promise<ReactElement> {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
   const {
@@ -16,8 +15,8 @@ export default async function Home(): Promise<ReactElement> {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return <LandingExperience />;
+    redirect("/login");
   }
 
-  return <MissionControlDashboard />;
+  return <MembersManager />;
 }

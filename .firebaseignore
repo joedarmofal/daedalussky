@@ -1,0 +1,11 @@
+# Firebase local files
+.firebase/
+
+# Node/Next artifacts
+node_modules/
+.next/
+out/
+coverage/
+
+# Env files
+.env*

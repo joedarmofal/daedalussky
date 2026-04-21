@@ -1,0 +1,18 @@
+ALTER TABLE "members" ADD COLUMN "position" text;
+ALTER TABLE "members" ADD COLUMN "date_of_birth" date;
+ALTER TABLE "members" ADD COLUMN "photo_data_url" text;
+ALTER TABLE "members" ADD COLUMN "emergency_contact_name" text;
+ALTER TABLE "members" ADD COLUMN "emergency_contact_phone" text;
+ALTER TABLE "members" ADD COLUMN "emergency_contact_address" text;
+ALTER TABLE "members" ADD COLUMN "employee_id" text;
+ALTER TABLE "members" ADD COLUMN "hire_date" date;
+ALTER TABLE "members" ADD COLUMN "years_flight_experience" numeric(5, 2);
+ALTER TABLE "members" ADD COLUMN "total_years_experience" numeric(5, 2);
+ALTER TABLE "members" ADD COLUMN "mobile_number" text;
+ALTER TABLE "members" ADD COLUMN "mobile_carrier" text;
+ALTER TABLE "members" ADD COLUMN "flight_suit_size" text;
+ALTER TABLE "members" ADD COLUMN "t_shirt_size" text;
+ALTER TABLE "members" ADD COLUMN "gender" text;
+ALTER TABLE "members" ADD COLUMN "weight_lbs" numeric(7, 2);
+ALTER TABLE "member_certifications" ADD COLUMN "certification_image_data_url" text;
+ALTER TABLE "members" ADD CONSTRAINT "members_weight_lbs_positive" CHECK ("members"."weight_lbs" IS NULL OR "members"."weight_lbs" > 0);

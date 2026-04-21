@@ -1,26 +1,143 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
+  --background: #070b12;
+  --surface: #0c1220;
+  --surface-elevated: #111a2c;
+  --foreground: #e8edf7;
+  --muted: #8b96ad;
+  --grid: rgba(120, 170, 255, 0.08);
+  --grid-strong: rgba(120, 170, 255, 0.14);
+  --border: rgba(120, 170, 255, 0.22);
+  --accent: #5bd7ff;
+  --accent-muted: rgba(91, 215, 255, 0.35);
+  --danger: #ff6b6b;
+  /* Renaissance / manuscript accent — ties UI to hero artwork */
+  --parchment: #d4c4a8;
+  --parchment-dim: rgba(212, 196, 168, 0.45);
+  --sepia-glow: rgba(139, 110, 80, 0.35);
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-muted: var(--accent-muted);
+  --color-danger: var(--danger);
+  --color-border: var(--border);
+  --color-parchment: var(--parchment);
+  --color-parchment-dim: var(--parchment-dim);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  min-height: 100vh;
+  background-color: var(--background);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+    radial-gradient(circle at 20% 0%, rgba(91, 215, 255, 0.12), transparent 45%),
+    radial-gradient(circle at 80% 10%, rgba(91, 215, 255, 0.08), transparent 40%),
+    radial-gradient(
+      ellipse 120% 80% at 100% 20%,
+      var(--sepia-glow),
+      transparent 55%
+    );
+  background-size:
+    32px 32px,
+    32px 32px,
+    auto,
+    auto,
+    auto;
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Human–machine interface hero: codex art + instrument readout */
+.hmi-hero-panel {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background:
+    linear-gradient(135deg, rgba(17, 26, 44, 0.92) 0%, rgba(7, 11, 18, 0.96) 100%),
+    linear-gradient(var(--grid-strong) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-strong) 1px, transparent 1px);
+  background-size: auto, 20px 20px, 20px 20px;
+  box-shadow:
+    inset 0 0 0 1px rgba(212, 196, 168, 0.08),
+    inset 0 0 80px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(91, 215, 255, 0.06);
+}
+
+.hmi-hero-panel::before,
+.hmi-hero-panel::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: var(--parchment-dim);
+  border-style: solid;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.hmi-hero-panel::before {
+  top: 10px;
+  left: 10px;
+  border-width: 2px 0 0 2px;
+}
+
+.hmi-hero-panel::after {
+  bottom: 10px;
+  right: 10px;
+  border-width: 0 2px 2px 0;
+}
+
+.hmi-hero-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: sepia(0.35) saturate(0.75) brightness(0.72) contrast(1.08);
+  mask-image: radial-gradient(
+    ellipse 95% 90% at 58% 48%,
+    #000 0%,
+    #000 52%,
+    transparent 78%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse 95% 90% at 58% 48%,
+    #000 0%,
+    #000 52%,
+    transparent 78%
+  );
+}
+
+.hmi-hero-scanlines {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.12) 2px,
+    rgba(0, 0, 0, 0.12) 3px
+  );
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  border-radius: 2px;
+}
+
+.hmi-hero-chrome {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  color: var(--parchment-dim);
 }
