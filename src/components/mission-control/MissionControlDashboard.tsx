@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { ReactElement } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -81,6 +82,7 @@ function formatTime(iso: string): string {
 }
 
 export function MissionControlDashboard(): ReactElement {
+  const pathname = usePathname();
   const [now, setNow] = useState<string>(() => new Date().toISOString());
   const [position, setPosition] = useState<{ lat: number; lon: number } | null>(
     null,
@@ -350,7 +352,7 @@ export function MissionControlDashboard(): ReactElement {
             <p className="mt-1 font-mono text-xs text-muted">
               Regional weather · radar · TFR awareness · KPI snapshot
             </p>
-            <OrgPrimaryNav currentPath="/" />
+            <OrgPrimaryNav currentPath={pathname ?? "/mission-control"} />
           </div>
           <div className="flex flex-wrap items-center gap-3 font-mono text-sm">
             <span className="rounded border border-border px-3 py-1.5 text-parchment">

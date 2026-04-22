@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 const ORG_NAV_ITEMS = [
-  { href: "/", label: "Mission Control" },
+  { href: "/mission-control", label: "Mission Control" },
   { href: "/members", label: "Members" },
   { href: "/debriefing", label: "Debriefing" },
   { href: "/quality", label: "Quality" },
@@ -15,7 +15,10 @@ export function OrgPrimaryNav(props: { currentPath: string }) {
   return (
     <nav className="mt-3 flex flex-wrap gap-2">
       {ORG_NAV_ITEMS.map((item) => {
-        const isActive = item.href === props.currentPath;
+        const isActive =
+          item.href === props.currentPath ||
+          (item.href === "/mission-control" &&
+            (props.currentPath === "/" || props.currentPath === "/mission-control"));
         return (
           <Link
             key={item.href}
