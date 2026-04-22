@@ -14,6 +14,23 @@ import type {
 } from "@/types/mission-control";
 import { OrgPrimaryNav } from "@/components/org/OrgPrimaryNav";
 
+type MissionHazard = {
+  id: string;
+  title: string;
+  details: string | null;
+  status: "current" | "resolved";
+  createdAt: string;
+  resolvedAt: string | null;
+};
+
+type MissionBulletin = {
+  id: string;
+  note: string;
+  isImportant: boolean;
+  createdByDisplayName: string | null;
+  createdAt: string;
+};
+
 const RadarMap = dynamic(
   () => import("./RadarMap").then((m) => m.RadarMap),
   {
@@ -74,6 +91,23 @@ export function MissionControlDashboard(): ReactElement {
   const [weather, setWeather] = useState<MissionControlWeather | null>(null);
   const [tfr, setTfr] = useState<MissionControlTfrPayload | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [hazards, setHazards] = useState<MissionHazard[]>([]);
+  const [archiveHazards, setArchiveHazards] = useState<MissionHazard[]>([]);
+  const [hazardTitle, setHazardTitle] = useState("");
+  const [hazardDetails, setHazardDetails] = useState("");
+  const [hazardNotice, setHazardNotice] = useState<string | null>(null);
+  const [hazardError, setHazardError] = useState<string | null>(null);
+  const [loadingHazards, setLoadingHazards] = useState(false);
+  const [savingHazard, setSavingHazard] = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
+  const [bulletins, setBulletins] = useState<MissionBulletin[]>([]);
+  const [bulletinText, setBulletinText] = useState("");
+  const [bulletinImportant, setBulletinImportant] = useState(false);
+  const [bulletinRange, setBulletinRange] = useState<"all" | "24h">("all");
+  const [bulletinError, setBulletinError] = useState<string | null>(null);
+  const [bulletinNotice, setBulletinNotice] = useState<string | null>(null);
+  const [loadingBulletins, setLoadingBulletins] = useState(false);
+  const [savingBulletin, setSavingBulletin] = useState(false);
 
   const coords = useMemo(
     () => position ?? { lat: DEFAULT_LAT, lon: DEFAULT_LON },
@@ -89,7 +123,7 @@ export function MissionControlDashboard(): ReactElement {
         fetch(`/api/mission-control/tfr?lat=${lat}&lon=${lon}`),
       ]);
       if (wRes.status === 401 || tRes.status === 401) {
-        window.location.href = "/login";
+        setLoadError("Weather/TFR feeds require authentication right now.");
         return;
       }
       if (!wRes.ok) {
@@ -137,6 +171,162 @@ export function MissionControlDashboard(): ReactElement {
       void refresh();
     });
   }, [refresh]);
+
+  const refreshHazards = useCallback(async (): Promise<void> => {
+    setLoadingHazards(true);
+    setHazardError(null);
+    try {
+      const [currentRes, archiveRes] = await Promise.all([
+        fetch("/api/mission-control/hazards?view=current", { cache: "no-store" }),
+        fetch("/api/mission-control/hazards?view=archive", { cache: "no-store" }),
+      ]);
+      if (currentRes.status === 401 || archiveRes.status === 401) {
+        setHazardError("Hazards require authentication right now.");
+        return;
+      }
+      const currentBody = (await currentRes.json()) as {
+        hazards?: MissionHazard[];
+        error?: string;
+      };
+      const archiveBody = (await archiveRes.json()) as {
+        hazards?: MissionHazard[];
+        error?: string;
+      };
+      if (!currentRes.ok || !archiveRes.ok || !currentBody.hazards || !archiveBody.hazards) {
+        setHazardError(
+          currentBody.error ??
+            archiveBody.error ??
+            "Unable to load hazard list.",
+        );
+        return;
+      }
+      setHazards(currentBody.hazards);
+      setArchiveHazards(archiveBody.hazards);
+    } catch {
+      setHazardError("Unable to load hazard list.");
+    } finally {
+      setLoadingHazards(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      void refreshHazards();
+    });
+  }, [refreshHazards]);
+
+  async function submitHazard(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    setSavingHazard(true);
+    setHazardError(null);
+    setHazardNotice(null);
+
+    const response = await fetch("/api/mission-control/hazards", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: hazardTitle, details: hazardDetails }),
+    });
+    const body = (await response.json()) as { error?: string };
+    if (!response.ok) {
+      setHazardError(body.error ?? "Unable to add hazard.");
+      setSavingHazard(false);
+      return;
+    }
+
+    setHazardTitle("");
+    setHazardDetails("");
+    setHazardNotice("Hazard added to current list.");
+    await refreshHazards();
+    setSavingHazard(false);
+  }
+
+  async function updateHazardStatus(
+    hazardId: string,
+    status: "current" | "resolved",
+  ): Promise<void> {
+    setHazardError(null);
+    setHazardNotice(null);
+    const response = await fetch(`/api/mission-control/hazards/${hazardId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    const body = (await response.json()) as { error?: string };
+    if (!response.ok) {
+      setHazardError(body.error ?? "Unable to update hazard.");
+      return;
+    }
+    setHazardNotice(
+      status === "resolved"
+        ? "Hazard marked resolved and moved to archive."
+        : "Hazard restored to current list.",
+    );
+    await refreshHazards();
+  }
+
+  const refreshBulletins = useCallback(async (): Promise<void> => {
+    setLoadingBulletins(true);
+    setBulletinError(null);
+    try {
+      const url =
+        bulletinRange === "24h"
+          ? "/api/mission-control/bulletins?range=24h"
+          : "/api/mission-control/bulletins";
+      const responseFiltered = await fetch(url, {
+        cache: "no-store",
+      });
+      if (responseFiltered.status === 401) {
+        setBulletinError("Bulletin board requires authentication right now.");
+        return;
+      }
+      const body = (await responseFiltered.json()) as {
+        bulletins?: MissionBulletin[];
+        error?: string;
+      };
+      if (!responseFiltered.ok || !body.bulletins) {
+        setBulletinError(body.error ?? "Unable to load bulletin board.");
+        return;
+      }
+      setBulletins(body.bulletins);
+    } catch {
+      setBulletinError("Unable to load bulletin board.");
+    } finally {
+      setLoadingBulletins(false);
+    }
+  }, [bulletinRange]);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      void refreshBulletins();
+    });
+  }, [refreshBulletins]);
+
+  async function submitBulletin(
+    event: React.FormEvent<HTMLFormElement>,
+  ): Promise<void> {
+    event.preventDefault();
+    setSavingBulletin(true);
+    setBulletinError(null);
+    setBulletinNotice(null);
+
+    const response = await fetch("/api/mission-control/bulletins", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: bulletinText, isImportant: bulletinImportant }),
+    });
+    const body = (await response.json()) as { error?: string };
+    if (!response.ok) {
+      setBulletinError(body.error ?? "Unable to save note.");
+      setSavingBulletin(false);
+      return;
+    }
+
+    setBulletinText("");
+    setBulletinImportant(false);
+    setBulletinNotice("Operational note posted.");
+    await refreshBulletins();
+    setSavingBulletin(false);
+  }
 
   async function signOut(): Promise<void> {
     const supabase = createClient();
@@ -265,6 +455,232 @@ export function MissionControlDashboard(): ReactElement {
             unit="active"
             hint={tfr?.source ?? "—"}
           />
+        </section>
+
+        <section className="rounded-xl border border-border bg-surface p-5 shadow-[inset_0_1px_0_0_var(--grid-strong)]">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted">
+              Hazards list
+            </h2>
+            <button
+              type="button"
+              onClick={() => setShowArchive((prev) => !prev)}
+              className="rounded border border-border px-3 py-1.5 font-mono text-xs text-muted hover:border-accent/40 hover:text-accent"
+            >
+              {showArchive ? "Hide archive" : "Show archive"}
+            </button>
+          </div>
+
+          <form className="mt-4 grid gap-3" onSubmit={(event) => void submitHazard(event)}>
+            <input
+              value={hazardTitle}
+              onChange={(event) => setHazardTitle(event.target.value)}
+              placeholder="Hazard title (required)"
+              className="rounded border border-border bg-background/40 px-3 py-2 text-sm text-foreground"
+              maxLength={140}
+              required
+            />
+            <textarea
+              value={hazardDetails}
+              onChange={(event) => setHazardDetails(event.target.value)}
+              placeholder="Details, location, or mitigation notes"
+              className="min-h-20 rounded border border-border bg-background/40 px-3 py-2 text-sm text-foreground"
+              maxLength={4000}
+            />
+            <div>
+              <button
+                type="submit"
+                disabled={savingHazard}
+                className="rounded border border-accent/40 px-3 py-1.5 text-sm text-accent hover:bg-accent/10 disabled:opacity-60"
+              >
+                {savingHazard ? "Adding..." : "Add hazard"}
+              </button>
+            </div>
+          </form>
+
+          {hazardError ? (
+            <p className="mt-3 rounded border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">
+              {hazardError}
+            </p>
+          ) : null}
+          {hazardNotice ? (
+            <p className="mt-3 rounded border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-accent">
+              {hazardNotice}
+            </p>
+          ) : null}
+
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            <div className="rounded-lg border border-border/80 bg-background/40 p-4">
+              <h3 className="font-mono text-[0.65rem] uppercase tracking-widest text-parchment-dim">
+                Current hazards
+              </h3>
+              {loadingHazards ? (
+                <p className="mt-3 text-sm text-muted">Loading hazards...</p>
+              ) : null}
+              {!loadingHazards && hazards.length === 0 ? (
+                <p className="mt-3 text-sm text-muted">No current hazards logged.</p>
+              ) : null}
+              <ul className="mt-3 space-y-2">
+                {hazards.map((hazard) => (
+                  <li
+                    key={hazard.id}
+                    className="rounded border border-border/60 bg-surface-elevated/40 p-3"
+                  >
+                    <p className="text-sm font-semibold text-foreground">{hazard.title}</p>
+                    {hazard.details ? (
+                      <p className="mt-1 text-sm text-muted">{hazard.details}</p>
+                    ) : null}
+                    <p className="mt-2 font-mono text-[0.65rem] text-parchment-dim">
+                      Logged {new Date(hazard.createdAt).toLocaleString()}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void updateHazardStatus(hazard.id, "resolved")}
+                      className="mt-2 rounded border border-border px-2.5 py-1 text-xs text-muted hover:border-accent/40 hover:text-accent"
+                    >
+                      Mark resolved
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {showArchive ? (
+              <div className="rounded-lg border border-border/80 bg-background/40 p-4">
+                <h3 className="font-mono text-[0.65rem] uppercase tracking-widest text-parchment-dim">
+                  Hazard archive
+                </h3>
+                {loadingHazards ? (
+                  <p className="mt-3 text-sm text-muted">Loading archive...</p>
+                ) : null}
+                {!loadingHazards && archiveHazards.length === 0 ? (
+                  <p className="mt-3 text-sm text-muted">No archived hazards yet.</p>
+                ) : null}
+                <ul className="mt-3 space-y-2">
+                  {archiveHazards.map((hazard) => (
+                    <li
+                      key={hazard.id}
+                      className="rounded border border-border/60 bg-surface-elevated/40 p-3"
+                    >
+                      <p className="text-sm font-semibold text-foreground">{hazard.title}</p>
+                      {hazard.details ? (
+                        <p className="mt-1 text-sm text-muted">{hazard.details}</p>
+                      ) : null}
+                      <p className="mt-2 font-mono text-[0.65rem] text-parchment-dim">
+                        Resolved {hazard.resolvedAt ? new Date(hazard.resolvedAt).toLocaleString() : "—"}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void updateHazardStatus(hazard.id, "current")}
+                        className="mt-2 rounded border border-border px-2.5 py-1 text-xs text-muted hover:border-accent/40 hover:text-accent"
+                      >
+                        Restore to current
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-border/70 bg-background/20 p-4">
+                <p className="text-sm text-muted">
+                  Resolved hazards are removed from current view and retained in archive.
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-border bg-surface p-5 shadow-[inset_0_1px_0_0_var(--grid-strong)]">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted">
+            Bulletin board
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            Members can post free-text operational notes with automatic date/time stamps.
+          </p>
+          <form className="mt-4 grid gap-3" onSubmit={(event) => void submitBulletin(event)}>
+            <textarea
+              value={bulletinText}
+              onChange={(event) => setBulletinText(event.target.value)}
+              placeholder="Add operational note..."
+              className="min-h-24 rounded border border-border bg-background/40 px-3 py-2 text-sm text-foreground"
+              maxLength={4000}
+              required
+            />
+            <div>
+              <label className="mb-2 flex items-center gap-2 text-xs text-muted">
+                <input
+                  type="checkbox"
+                  checked={bulletinImportant}
+                  onChange={(event) => setBulletinImportant(event.target.checked)}
+                  className="h-4 w-4 rounded border-border bg-background/40"
+                />
+                Pin as important
+              </label>
+              <button
+                type="submit"
+                disabled={savingBulletin}
+                className="rounded border border-accent/40 px-3 py-1.5 text-sm text-accent hover:bg-accent/10 disabled:opacity-60"
+              >
+                {savingBulletin ? "Posting..." : "Post note"}
+              </button>
+            </div>
+          </form>
+          {bulletinError ? (
+            <p className="mt-3 rounded border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">
+              {bulletinError}
+            </p>
+          ) : null}
+          {bulletinNotice ? (
+            <p className="mt-3 rounded border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-accent">
+              {bulletinNotice}
+            </p>
+          ) : null}
+          <div className="mt-4 rounded-lg border border-border/80 bg-background/40 p-4">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <h3 className="font-mono text-[0.65rem] uppercase tracking-widest text-parchment-dim">
+                Recent entries
+              </h3>
+              <label className="font-mono text-[0.65rem] text-muted">
+                Filter
+                <select
+                  value={bulletinRange}
+                  onChange={(event) =>
+                    setBulletinRange(event.target.value === "24h" ? "24h" : "all")
+                  }
+                  className="ml-2 rounded border border-border bg-background/40 px-2 py-1 text-xs text-foreground"
+                >
+                  <option value="all">All</option>
+                  <option value="24h">Last 24h</option>
+                </select>
+              </label>
+            </div>
+            {loadingBulletins ? (
+              <p className="mt-3 text-sm text-muted">Loading notes...</p>
+            ) : null}
+            {!loadingBulletins && bulletins.length === 0 ? (
+              <p className="mt-3 text-sm text-muted">No notes posted yet.</p>
+            ) : null}
+            <ul className="mt-3 space-y-2">
+              {bulletins.map((entry) => (
+                <li
+                  key={entry.id}
+                  className="rounded border border-border/60 bg-surface-elevated/40 p-3"
+                >
+                  {entry.isImportant ? (
+                    <p className="mb-1 font-mono text-[0.65rem] uppercase tracking-widest text-accent">
+                      Important
+                    </p>
+                  ) : null}
+                  <p className="whitespace-pre-wrap text-sm text-foreground">{entry.note}</p>
+                  <p className="mt-2 font-mono text-[0.65rem] text-parchment-dim">
+                    {new Date(entry.createdAt).toLocaleString()}
+                    {" · "}
+                    {entry.createdByDisplayName ?? "Unknown member"}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">

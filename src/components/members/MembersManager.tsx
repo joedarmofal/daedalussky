@@ -101,7 +101,8 @@ export function MembersManager(): ReactElement {
     try {
       const res = await fetch("/api/members");
       if (res.status === 401) {
-        window.location.href = "/login";
+        setError("Members data requires authentication right now.");
+        setLoading(false);
         return;
       }
       const body = (await res.json()) as MembersResponse | { error?: string };

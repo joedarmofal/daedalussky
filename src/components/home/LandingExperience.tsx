@@ -29,11 +29,55 @@ export function LandingExperience(): ReactElement {
             </p>
             <div className="flex flex-wrap items-center gap-4 pt-2">
               <Link
-                href="/login"
+                href="/"
                 className="rounded-md border border-accent/50 bg-accent/10 px-4 py-2 font-mono text-sm font-medium text-accent hover:bg-accent/20"
               >
-                Sign in → Mission Control
+                Open Mission Control
               </Link>
+              <div className="flex flex-wrap items-center gap-2">
+                <Link
+                  href="/members"
+                  className="rounded-md border border-border bg-background/60 px-3 py-1.5 font-mono text-xs text-foreground hover:border-accent/40"
+                >
+                  Members
+                </Link>
+                <Link
+                  href="/debriefing"
+                  className="rounded-md border border-border bg-background/60 px-3 py-1.5 font-mono text-xs text-foreground hover:border-accent/40"
+                >
+                  Debriefing
+                </Link>
+                <Link
+                  href="/schedule"
+                  className="rounded-md border border-border bg-background/60 px-3 py-1.5 font-mono text-xs text-foreground hover:border-accent/40"
+                >
+                  Schedule
+                </Link>
+                <Link
+                  href="/quality"
+                  className="rounded-md border border-border bg-background/60 px-3 py-1.5 font-mono text-xs text-foreground hover:border-accent/40"
+                >
+                  Quality
+                </Link>
+                <Link
+                  href="/education"
+                  className="rounded-md border border-border bg-background/60 px-3 py-1.5 font-mono text-xs text-foreground hover:border-accent/40"
+                >
+                  Education
+                </Link>
+                <Link
+                  href="/clients"
+                  className="rounded-md border border-border bg-background/60 px-3 py-1.5 font-mono text-xs text-foreground hover:border-accent/40"
+                >
+                  Clients
+                </Link>
+                <Link
+                  href="/pulse-check"
+                  className="rounded-md border border-border bg-background/60 px-3 py-1.5 font-mono text-xs text-foreground hover:border-accent/40"
+                >
+                  Pulse Check
+                </Link>
+              </div>
               <div className="flex flex-wrap gap-2 font-mono text-sm">
                 <span className="rounded border border-border bg-background/60 px-3 py-1.5 text-parchment">
                   mass · kg

@@ -76,7 +76,8 @@ export function ScheduleBoard(): ReactElement {
     try {
       const res = await fetch("/api/schedule");
       if (res.status === 401) {
-        window.location.href = "/login";
+        setError("Schedule data requires authentication right now.");
+        setLoading(false);
         return;
       }
       const body = (await res.json()) as ScheduleResponse | { error?: string };

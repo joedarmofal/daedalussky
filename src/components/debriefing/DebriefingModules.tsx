@@ -94,7 +94,7 @@ export function DebriefingModules(): ReactElement {
         try {
           const res = await fetch("/api/members");
           if (res.status === 401) {
-            window.location.href = "/login";
+            setError("Debrief member data requires authentication right now.");
             return;
           }
           const body = (await res.json()) as MembersPayload | { error?: string };
