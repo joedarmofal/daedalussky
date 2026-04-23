@@ -34,6 +34,12 @@ export function LandingExperience(): ReactElement {
               >
                 Open Mission Control
               </Link>
+              <Link
+                href="/login"
+                className="rounded-md border border-border bg-background/60 px-4 py-2 font-mono text-sm text-foreground hover:border-accent/40"
+              >
+                Sign in
+              </Link>
               <div className="flex flex-wrap items-center gap-2">
                 <Link
                   href="/members"

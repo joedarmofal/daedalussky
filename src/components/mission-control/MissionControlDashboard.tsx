@@ -6,7 +6,10 @@ import { usePathname } from "next/navigation";
 import type { ReactElement } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { createClient } from "@/utils/supabase/client";
+import { signOut } from "firebase/auth";
+
+import { authedFetch } from "@/lib/authed-fetch";
+import { getFirebaseAuth } from "@firebase-config";
 import { faaTfrListUrl } from "@/lib/mission-control/tfr-feed";
 import { wmoWeatherLabel } from "@/lib/mission-control/wmo-weather";
 import type {
@@ -121,8 +124,8 @@ export function MissionControlDashboard(): ReactElement {
     const { lat, lon } = coords;
     try {
       const [wRes, tRes] = await Promise.all([
-        fetch(`/api/mission-control/weather?lat=${lat}&lon=${lon}`),
-        fetch(`/api/mission-control/tfr?lat=${lat}&lon=${lon}`),
+        authedFetch(`/api/mission-control/weather?lat=${lat}&lon=${lon}`),
+        authedFetch(`/api/mission-control/tfr?lat=${lat}&lon=${lon}`),
       ]);
       if (wRes.status === 401 || tRes.status === 401) {
         setLoadError("Weather/TFR feeds require authentication right now.");
@@ -179,8 +182,8 @@ export function MissionControlDashboard(): ReactElement {
     setHazardError(null);
     try {
       const [currentRes, archiveRes] = await Promise.all([
-        fetch("/api/mission-control/hazards?view=current", { cache: "no-store" }),
-        fetch("/api/mission-control/hazards?view=archive", { cache: "no-store" }),
+        authedFetch("/api/mission-control/hazards?view=current", { cache: "no-store" }),
+        authedFetch("/api/mission-control/hazards?view=archive", { cache: "no-store" }),
       ]);
       if (currentRes.status === 401 || archiveRes.status === 401) {
         setHazardError("Hazards require authentication right now.");
@@ -223,7 +226,7 @@ export function MissionControlDashboard(): ReactElement {
     setHazardError(null);
     setHazardNotice(null);
 
-    const response = await fetch("/api/mission-control/hazards", {
+    const response = await authedFetch("/api/mission-control/hazards", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: hazardTitle, details: hazardDetails }),
@@ -248,7 +251,7 @@ export function MissionControlDashboard(): ReactElement {
   ): Promise<void> {
     setHazardError(null);
     setHazardNotice(null);
-    const response = await fetch(`/api/mission-control/hazards/${hazardId}`, {
+    const response = await authedFetch(`/api/mission-control/hazards/${hazardId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
@@ -274,7 +277,7 @@ export function MissionControlDashboard(): ReactElement {
         bulletinRange === "24h"
           ? "/api/mission-control/bulletins?range=24h"
           : "/api/mission-control/bulletins";
-      const responseFiltered = await fetch(url, {
+      const responseFiltered = await authedFetch(url, {
         cache: "no-store",
       });
       if (responseFiltered.status === 401) {
@@ -311,7 +314,7 @@ export function MissionControlDashboard(): ReactElement {
     setBulletinError(null);
     setBulletinNotice(null);
 
-    const response = await fetch("/api/mission-control/bulletins", {
+    const response = await authedFetch("/api/mission-control/bulletins", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ note: bulletinText, isImportant: bulletinImportant }),
@@ -330,9 +333,8 @@ export function MissionControlDashboard(): ReactElement {
     setSavingBulletin(false);
   }
 
-  async function signOut(): Promise<void> {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+  async function onSignOut(): Promise<void> {
+    await signOut(getFirebaseAuth());
     window.location.href = "/";
   }
 
@@ -376,7 +378,7 @@ export function MissionControlDashboard(): ReactElement {
             </button>
             <button
               type="button"
-              onClick={() => void signOut()}
+              onClick={() => void onSignOut()}
               className="rounded border border-border px-3 py-1.5 text-muted hover:border-danger/50 hover:text-danger"
             >
               Sign out

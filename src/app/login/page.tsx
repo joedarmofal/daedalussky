@@ -1,8 +1,9 @@
 import type { ReactElement } from "react";
-import { redirect } from "next/navigation";
+
+import { FirebaseLoginForm } from "./FirebaseLoginForm";
 
 export const dynamic = "force-dynamic";
 
-export default async function LoginPage(): Promise<ReactElement> {
-  redirect("/");
+export default function LoginPage(): ReactElement {
+  return <FirebaseLoginForm />;
 }

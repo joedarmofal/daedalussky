@@ -1,11 +1,7 @@
-import { eq } from "drizzle-orm";
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { getDb } from "@/db";
-import { members } from "@/db/schema/members";
-import { createAdminClient } from "@/utils/supabase/admin";
-import { createClient } from "@/utils/supabase/server";
+import { getRequesterFromRequest } from "@/lib/api-auth";
+import { createSupabaseStorageAdminClient } from "@/lib/supabase-storage-admin";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_KINDS = new Set(["member-photo", "certification-image"]);
@@ -15,30 +11,11 @@ function sanitizeFilename(name: string): string {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const authResult = await getRequesterFromRequest(request);
+  if ("error" in authResult) {
+    return authResult.error;
   }
-
-  const db = getDb();
-  const requesterRows = await db
-    .select({
-      organizationId: members.organizationId,
-    })
-    .from(members)
-    .where(eq(members.authSubject, user.id))
-    .limit(1);
-  const requester = requesterRows[0];
-  if (!requester) {
-    return NextResponse.json(
-      { error: "No member profile mapped to this auth user." },
-      { status: 403 },
-    );
-  }
+  const { requester } = authResult;
 
   const form = await request.formData();
   const file = form.get("file");
@@ -66,7 +43,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   const safeName = sanitizeFilename(file.name || `upload.${ext}`);
   const path = `${requester.organizationId}/${kindRaw}/${Date.now()}-${crypto.randomUUID()}-${safeName}`;
 
-  const admin = createAdminClient();
+  const admin = createSupabaseStorageAdminClient();
   const arrayBuffer = await file.arrayBuffer();
   const { error: uploadError } = await admin.storage
     .from(bucket)

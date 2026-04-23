@@ -1,48 +1,13 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { getDb } from "@/db";
 import { members } from "@/db/schema/members";
 import { scheduleShifts } from "@/db/schema/schedule-shifts";
-import { createClient } from "@/utils/supabase/server";
+import { getRequesterFromRequest } from "@/lib/api-auth";
 
-async function getRequester() {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
-  }
-
-  const db = getDb();
-  const requesterRows = await db
-    .select({
-      id: members.id,
-      organizationId: members.organizationId,
-      role: members.role,
-      displayName: members.displayName,
-    })
-    .from(members)
-    .where(eq(members.authSubject, user.id))
-    .limit(1);
-  const requester = requesterRows[0];
-  if (!requester) {
-    return {
-      error: NextResponse.json(
-        { error: "No member row mapped to this auth user." },
-        { status: 403 },
-      ),
-    };
-  }
-  return { requester, db };
-}
-
-export async function GET(): Promise<NextResponse> {
-  const result = await getRequester();
-  if (result.error) {
+export async function GET(request: Request): Promise<NextResponse> {
+  const result = await getRequesterFromRequest(request);
+  if ("error" in result) {
     return result.error;
   }
   const { requester, db } = result;
@@ -83,8 +48,8 @@ export async function GET(): Promise<NextResponse> {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
-  const result = await getRequester();
-  if (result.error) {
+  const result = await getRequesterFromRequest(request);
+  if ("error" in result) {
     return result.error;
   }
   const { requester, db } = result;

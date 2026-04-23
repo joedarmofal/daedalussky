@@ -25,7 +25,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@firebase-config": ["./lib/firebase.ts"],
+      "@firebase-admin": ["./lib/firebaseAdmin.ts"]
     }
   },
   "include": [

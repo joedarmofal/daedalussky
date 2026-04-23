@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import { useEffect, useMemo, useState } from "react";
 
 import { OrgPrimaryNav } from "@/components/org/OrgPrimaryNav";
+import { authedFetch } from "@/lib/authed-fetch";
 import {
   getMissingRequiredQuestions,
   getVisibleQuestions,
@@ -92,7 +93,7 @@ export function DebriefingModules(): ReactElement {
     queueMicrotask(() => {
       void (async () => {
         try {
-          const res = await fetch("/api/members");
+          const res = await authedFetch("/api/members");
           if (res.status === 401) {
             setError("Debrief member data requires authentication right now.");
             return;
@@ -106,7 +107,7 @@ export function DebriefingModules(): ReactElement {
             );
           }
           setMembers(body.members);
-          const debriefRes = await fetch("/api/debriefing");
+          const debriefRes = await authedFetch("/api/debriefing");
           const debriefBody = (await debriefRes.json()) as
             | DebriefPayload
             | { error?: string };
@@ -195,7 +196,7 @@ export function DebriefingModules(): ReactElement {
     }
     const draft = drafts[moduleName];
     const crewMemberIds = CREW_SLOT_KEYS.map((k) => draft[k]).filter(Boolean);
-    const response = await fetch("/api/debriefing", {
+    const response = await authedFetch("/api/debriefing", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

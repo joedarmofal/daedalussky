@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { OrgPrimaryNav } from "@/components/org/OrgPrimaryNav";
+import { authedFetch } from "@/lib/authed-fetch";
 
 type PulseCheckLink = {
   id: string;
@@ -34,7 +35,7 @@ export function PulseCheckManager() {
   async function load() {
     setLoading(true);
     setError(null);
-    const res = await fetch("/api/pulse-check", { cache: "no-store" });
+    const res = await authedFetch("/api/pulse-check", { cache: "no-store" });
     const body = (await res.json()) as PulseCheckResponse | { error?: string };
     if (!res.ok || !("links" in body) || !("trips" in body)) {
       const apiError = "error" in body ? body.error : undefined;
@@ -66,7 +67,7 @@ export function PulseCheckManager() {
     setError(null);
     setNotice(null);
 
-    const res = await fetch("/api/pulse-check", {
+    const res = await authedFetch("/api/pulse-check", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tripNumber: selectedTrip }),

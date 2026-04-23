@@ -3,6 +3,7 @@
 import type { ReactElement } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { OrgPrimaryNav } from "@/components/org/OrgPrimaryNav";
+import { authedFetch } from "@/lib/authed-fetch";
 
 type MemberRole = "owner" | "admin" | "dispatcher" | "crew" | "medic" | "viewer";
 
@@ -99,7 +100,7 @@ export function MembersManager(): ReactElement {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/members");
+      const res = await authedFetch("/api/members");
       if (res.status === 401) {
         setError("Members data requires authentication right now.");
         setLoading(false);
@@ -170,7 +171,7 @@ export function MembersManager(): ReactElement {
         certificationIssuingEntity,
         certificationImagePath,
       };
-      const res = await fetch("/api/members", {
+      const res = await authedFetch("/api/members", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -223,7 +224,7 @@ export function MembersManager(): ReactElement {
     formData.append("file", file);
     formData.append("kind", kind);
 
-    const res = await fetch("/api/storage/upload", {
+    const res = await authedFetch("/api/storage/upload", {
       method: "POST",
       body: formData,
     });

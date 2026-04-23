@@ -1,11 +1,9 @@
 import { and, desc, eq } from "drizzle-orm";
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { getDb } from "@/db";
 import { memberCertifications } from "@/db/schema/member-certifications";
 import { members } from "@/db/schema/members";
-import { createClient } from "@/utils/supabase/server";
+import { getRequesterFromRequest } from "@/lib/api-auth";
 
 const CREATOR_ROLES = new Set(["owner", "admin"]);
 
@@ -83,48 +81,9 @@ function normalizeOptionalDate(value?: string): string | null {
   return v;
 }
 
-async function getRequester() {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
-  }
-
-  const db = getDb();
-  const requesterRows = await db
-    .select({
-      id: members.id,
-      organizationId: members.organizationId,
-      role: members.role,
-      displayName: members.displayName,
-      status: members.status,
-    })
-    .from(members)
-    .where(eq(members.authSubject, user.id))
-    .limit(1);
-
-  const requester = requesterRows[0];
-  if (!requester) {
-    return {
-      error: NextResponse.json(
-        {
-          error:
-            "No member profile mapped to this auth user. Create a member row with auth_subject set to the Supabase user id.",
-        },
-        { status: 403 },
-      ),
-    };
-  }
-
-  return { requester, db };
-}
-
-export async function GET(): Promise<NextResponse> {
-  const result = await getRequester();
-  if (result.error) {
+export async function GET(request: Request): Promise<NextResponse> {
+  const result = await getRequesterFromRequest(request);
+  if ("error" in result) {
     return result.error;
   }
 
@@ -173,8 +132,8 @@ export async function GET(): Promise<NextResponse> {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
-  const result = await getRequester();
-  if (result.error) {
+  const result = await getRequesterFromRequest(request);
+  if ("error" in result) {
     return result.error;
   }
 
@@ -301,7 +260,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       gender: normalizeOptional(body.gender),
       role,
       status: "invited",
-      authProvider: "supabase",
+      authProvider: "firebase",
       weightLbs: weightLbs === null ? null : String(weightLbs),
       weightDisplayUnit: "kg",
     })

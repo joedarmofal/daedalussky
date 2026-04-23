@@ -4,10 +4,10 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 /**
- * Server-only admin client for privileged operations (e.g., Storage uploads).
+ * Server-only Supabase client for Storage (not used for end-user auth).
  * Never import this module in Client Components.
  */
-export function createAdminClient() {
+export function createSupabaseStorageAdminClient() {
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error(
       "Missing NEXT_PUBLIC_SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY.",

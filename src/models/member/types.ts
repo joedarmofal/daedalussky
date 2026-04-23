@@ -48,8 +48,8 @@ export type MemberRow = {
    * Nullable while invite is outstanding.
    */
   authSubject: string | null;
-  /** IdP hint for migrations and support — e.g. supabase | nextauth | google. */
-  authProvider: "supabase" | "nextauth" | "google" | "other" | null;
+  /** IdP hint for migrations and support — e.g. firebase | nextauth | google. */
+  authProvider: "firebase" | "supabase" | "nextauth" | "google" | "other" | null;
   email: string | null;
   displayName: string;
   position: TeamPosition | null;

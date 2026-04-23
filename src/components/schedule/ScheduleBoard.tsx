@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import { useEffect, useMemo, useState } from "react";
 
 import { OrgPrimaryNav } from "@/components/org/OrgPrimaryNav";
+import { authedFetch } from "@/lib/authed-fetch";
 
 type Member = {
   id: string;
@@ -74,7 +75,7 @@ export function ScheduleBoard(): ReactElement {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/schedule");
+      const res = await authedFetch("/api/schedule");
       if (res.status === 401) {
         setError("Schedule data requires authentication right now.");
         setLoading(false);
@@ -114,7 +115,7 @@ export function ScheduleBoard(): ReactElement {
       const crewAssignments = Object.entries(assignments)
         .map(([role, memberId]) => ({ role, memberId }))
         .filter((a) => a.memberId);
-      const res = await fetch("/api/schedule", {
+      const res = await authedFetch("/api/schedule", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

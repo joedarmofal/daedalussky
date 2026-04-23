@@ -1,7 +1,6 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { createClient } from "@/utils/supabase/server";
+import { getRequesterFromRequest } from "@/lib/api-auth";
 import { fetchRegionalWeather } from "@/lib/mission-control/open-meteo";
 
 function parseCoord(name: string, value: string | null): number | null {
@@ -22,13 +21,9 @@ function parseCoord(name: string, value: string | null): number | null {
 }
 
 export async function GET(request: Request): Promise<NextResponse> {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const authResult = await getRequesterFromRequest(request);
+  if ("error" in authResult) {
+    return authResult.error;
   }
 
   const { searchParams } = new URL(request.url);
