@@ -74,25 +74,25 @@ export function SettingsPage(): ReactElement {
   }, [org.isOrgAdmin]);
 
   useEffect(() => {
-    void loadResources();
+    queueMicrotask(() => {
+      void loadResources();
+    });
   }, [loadResources]);
 
-  useEffect(() => {
-    if (editingBase) {
-      setEbName(editingBase.name);
-      setEbCode(editingBase.code ?? "");
-      setEbNotes(editingBase.notes ?? "");
-    }
-  }, [editingBase]);
+  function beginBaseEdit(base: BaseRow): void {
+    setEditingBase(base);
+    setEbName(base.name);
+    setEbCode(base.code ?? "");
+    setEbNotes(base.notes ?? "");
+  }
 
-  useEffect(() => {
-    if (editingAc) {
-      setEaTail(editingAc.tailNumber);
-      setEaModel(editingAc.model ?? "");
-      setEaBaseId(editingAc.baseId ?? "");
-      setEaNotes(editingAc.notes ?? "");
-    }
-  }, [editingAc]);
+  function beginAircraftEdit(ac: AircraftRow): void {
+    setEditingAc(ac);
+    setEaTail(ac.tailNumber);
+    setEaModel(ac.model ?? "");
+    setEaBaseId(ac.baseId ?? "");
+    setEaNotes(ac.notes ?? "");
+  }
 
   async function onProfileSubmit(e: FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault();
@@ -542,7 +542,7 @@ export function SettingsPage(): ReactElement {
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => setEditingBase(b)}
+                      onClick={() => beginBaseEdit(b)}
                       className="rounded border border-border px-3 py-1 text-xs text-foreground hover:border-accent/50"
                     >
                       Edit
@@ -686,7 +686,7 @@ export function SettingsPage(): ReactElement {
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => setEditingAc(a)}
+                      onClick={() => beginAircraftEdit(a)}
                       className="rounded border border-border px-3 py-1 text-xs text-foreground hover:border-accent/50"
                     >
                       Edit

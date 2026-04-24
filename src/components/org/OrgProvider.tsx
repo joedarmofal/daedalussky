@@ -55,7 +55,7 @@ type OrgContextValue = {
 const OrgContext = createContext<OrgContextValue | null>(null);
 
 export function OrgProvider({ children }: { children: ReactNode }) {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => getFirebaseAuth() !== null);
   const [error, setError] = useState<string | null>(null);
   const [member, setMember] = useState<OrgMemberProfile | null>(null);
   const [organization, setOrganization] = useState<OrgOrganization | null>(null);
@@ -99,7 +99,6 @@ export function OrgProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const auth = getFirebaseAuth();
     if (!auth) {
-      setLoading(false);
       return;
     }
     const unsub = onAuthStateChanged(auth, () => {

@@ -11,13 +11,20 @@ import { getFirestore, type Firestore } from "firebase-admin/firestore";
 console.log("Initializing Services...", { service: "firebase-admin" });
 
 function parseServiceAccountFromEnv(): ServiceAccount {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON?.trim();
+  const raw =
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON?.trim() ??
+    process.env.Firebase_service_account_json?.trim() ??
+    "";
   if (!raw) {
     throw new Error(
       "FIREBASE_SERVICE_ACCOUNT_JSON is not set. Server-side API routes cannot verify Firebase ID tokens without it.",
     );
   }
-  return JSON.parse(raw) as ServiceAccount;
+  const normalized =
+    (raw.startsWith("'") && raw.endsWith("'")) || (raw.startsWith("\"") && raw.endsWith("\""))
+      ? raw.slice(1, -1)
+      : raw;
+  return JSON.parse(normalized) as ServiceAccount;
 }
 
 /** Ensures the default Firebase Admin app exists (singleton). Uses env JSON only — no filesystem paths. */

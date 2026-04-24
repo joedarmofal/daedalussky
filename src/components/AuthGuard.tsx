@@ -65,13 +65,13 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
   const [allow, setAllow] = useState(anonPublic);
   const firebaseConfigured = isFirebaseWebConfigured();
+  const routeAllowsAnonymous = anonPublic;
 
   useEffect(() => {
     if (!firebaseConfigured) {
       return;
     }
-    if (anonPublic) {
-      setAllow(true);
+    if (routeAllowsAnonymous) {
       return;
     }
 
@@ -102,13 +102,13 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     });
 
     return () => unsub();
-  }, [anonPublic, firebaseConfigured, loginPath, pathname, queryString, router, searchParams]);
+  }, [firebaseConfigured, loginPath, pathname, queryString, routeAllowsAnonymous, router, searchParams]);
 
   if (!firebaseConfigured) {
     return <FirebaseConfigurationError missingKeys={getMissingFirebaseWebEnvNames()} />;
   }
 
-  if (!allow) {
+  if (!routeAllowsAnonymous && !allow) {
     return (
       <div
         className="flex min-h-[40vh] flex-1 items-center justify-center text-sm text-neutral-500"
