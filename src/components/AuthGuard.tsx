@@ -1,29 +1,44 @@
 "use client";
 
 import { onAuthStateChanged } from "firebase/auth";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { getFirebaseAuth } from "@firebase-config";
 
-/** Paths that do not require a Firebase session (prefix match after exact `/`). */
-function isPublicPath(pathname: string | null): boolean {
+/** Password reset and similar — no session required. */
+function isPublicAnonPath(pathname: string | null): boolean {
+  if (!pathname) {
+    return false;
+  }
+  if (pathname.startsWith("/auth")) {
+    return true;
+  }
+  return false;
+}
+
+function isLoginPath(pathname: string | null): boolean {
   if (!pathname) {
     return false;
   }
   if (pathname === "/") {
     return true;
   }
-  if (pathname.startsWith("/login")) {
-    return true;
-  }
-  if (pathname.startsWith("/auth")) {
-    return true;
-  }
-  if (pathname.startsWith("/pulse-check/s/")) {
+  if (pathname === "/login") {
     return true;
   }
   return false;
+}
+
+function safeInternalPath(path: string | null): string | null {
+  if (!path || !path.startsWith("/") || path.startsWith("//")) {
+    return null;
+  }
+  return path;
+}
+
+function postLoginDestination(redirectParam: string | null): string {
+  return safeInternalPath(redirectParam) ?? "/mission-control";
 }
 
 export type AuthGuardProps = {
@@ -31,37 +46,51 @@ export type AuthGuardProps = {
 };
 
 /**
- * Client-side Firebase auth gate for the App Router. Wrap a `layout.tsx` (or a
- * single page) for sections that should redirect anonymous users to `/login`.
- *
- * Does not call Firebase during SSR — waits for `onAuthStateChanged` on the client.
+ * Client-side Firebase gate: sign-in lives at `/` (and legacy `/login` redirects).
+ * Authenticated users hitting login paths go to Mission Control (or `?redirect=`).
+ * Anonymous users on protected routes go to `/?redirect=…`.
  */
 export default function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const publicRoute = isPublicPath(pathname);
+  const searchParams = useSearchParams();
+  const anonPublic = isPublicAnonPath(pathname);
+  const loginPath = isLoginPath(pathname);
+  const queryString = searchParams.toString();
 
-  const [allow, setAllow] = useState(publicRoute);
+  const [allow, setAllow] = useState(anonPublic);
 
   useEffect(() => {
-    if (publicRoute) {
+    if (anonPublic) {
       setAllow(true);
       return;
     }
 
-    setAllow(false);
     const auth = getFirebaseAuth();
     const unsub = onAuthStateChanged(auth, (user) => {
+      if (loginPath) {
+        if (user) {
+          const next = postLoginDestination(searchParams.get("redirect"));
+          router.replace(next);
+          setAllow(false);
+          return;
+        }
+        setAllow(true);
+        return;
+      }
+
       if (!user) {
-        const dest = pathname && pathname !== "/" ? pathname : "/mission-control";
-        router.replace(`/login?redirect=${encodeURIComponent(dest)}`);
+        const dest = `${pathname}${queryString ? `?${queryString}` : ""}`;
+        router.replace(`/?redirect=${encodeURIComponent(dest)}`);
         setAllow(false);
         return;
       }
+
       setAllow(true);
     });
+
     return () => unsub();
-  }, [publicRoute, pathname, router]);
+  }, [anonPublic, loginPath, pathname, queryString, router, searchParams]);
 
   if (!allow) {
     return (

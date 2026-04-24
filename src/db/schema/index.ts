@@ -1,4 +1,6 @@
 export * from "./enums";
+export * from "./bases";
+export * from "./aircraft";
 export * from "./debrief-entries";
 export * from "./member-certifications";
 export * from "./members";

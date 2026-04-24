@@ -15,5 +15,5 @@ export async function authedFetch(
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
-  return fetch(input, { ...init, headers });
+  return fetch(input, { ...init, headers, credentials: "include" });
 }

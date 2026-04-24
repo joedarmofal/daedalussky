@@ -99,7 +99,8 @@ export function PulseCheckManager() {
         <p className="text-xs uppercase tracking-[0.2em] text-accent">Customer service intelligence</p>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Pulse Check</h1>
         <p className="max-w-3xl text-sm text-muted">
-          Generate a unique QR code for a trip number and share it with customers to collect service feedback.
+          Generate a unique QR code for a trip number and share it with people who can sign in to Daedalus
+          Sky—survey pages and submissions require an authenticated session.
         </p>
         <OrgPrimaryNav currentPath="/pulse-check" />
       </header>

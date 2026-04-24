@@ -334,6 +334,11 @@ export function MissionControlDashboard(): ReactElement {
   }
 
   async function onSignOut(): Promise<void> {
+    try {
+      await fetch("/api/auth/session", { method: "DELETE", credentials: "include" });
+    } catch {
+      // Still sign out client-side so the UI cannot stay "logged in" without Firebase.
+    }
     await signOut(getFirebaseAuth());
     window.location.href = "/";
   }

@@ -1,14 +1,19 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-import { getDb } from "@/db";
 import { pulseCheckLinks, pulseCheckResponses } from "@/db/schema/pulse-check";
+import { getRequesterFromRequest } from "@/lib/api-auth";
 
 type Params = { params: Promise<{ token: string }> };
 
-export async function GET(_: Request, context: Params): Promise<NextResponse> {
+export async function GET(request: Request, context: Params): Promise<NextResponse> {
+  const auth = await getRequesterFromRequest(request);
+  if ("error" in auth) {
+    return auth.error;
+  }
+  const { requester, db } = auth;
+
   const { token } = await context.params;
-  const db = getDb();
   const rows = await db
     .select({
       id: pulseCheckLinks.id,
@@ -16,7 +21,12 @@ export async function GET(_: Request, context: Params): Promise<NextResponse> {
       status: pulseCheckLinks.status,
     })
     .from(pulseCheckLinks)
-    .where(eq(pulseCheckLinks.token, token))
+    .where(
+      and(
+        eq(pulseCheckLinks.token, token),
+        eq(pulseCheckLinks.organizationId, requester.organizationId),
+      ),
+    )
     .limit(1);
   const link = rows[0];
   if (!link || link.status !== "active") {
@@ -27,6 +37,12 @@ export async function GET(_: Request, context: Params): Promise<NextResponse> {
 }
 
 export async function POST(request: Request, context: Params): Promise<NextResponse> {
+  const auth = await getRequesterFromRequest(request);
+  if ("error" in auth) {
+    return auth.error;
+  }
+  const { requester, db } = auth;
+
   const { token } = await context.params;
   const body = (await request.json()) as {
     overallRating?: number;
@@ -65,14 +81,18 @@ export async function POST(request: Request, context: Params): Promise<NextRespo
     return NextResponse.json({ error: "wouldRecommend must be yes/no." }, { status: 400 });
   }
 
-  const db = getDb();
   const rows = await db
     .select({
       id: pulseCheckLinks.id,
       status: pulseCheckLinks.status,
     })
     .from(pulseCheckLinks)
-    .where(eq(pulseCheckLinks.token, token))
+    .where(
+      and(
+        eq(pulseCheckLinks.token, token),
+        eq(pulseCheckLinks.organizationId, requester.organizationId),
+      ),
+    )
     .limit(1);
   const link = rows[0];
   if (!link || link.status !== "active") {

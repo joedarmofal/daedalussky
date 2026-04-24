@@ -1,9 +1,9 @@
 import type { ReactElement } from "react";
 
-import { LandingExperience } from "@/components/home/LandingExperience";
+import { FirebaseLoginForm } from "@/app/login/FirebaseLoginForm";
 
 export const dynamic = "force-dynamic";
 
 export default function Home(): ReactElement {
-  return <LandingExperience />;
+  return <FirebaseLoginForm />;
 }

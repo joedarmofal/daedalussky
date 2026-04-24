@@ -9,6 +9,7 @@ const ORG_NAV_ITEMS = [
   { href: "/pulse-check", label: "Pulse Check" },
   { href: "/education", label: "Education" },
   { href: "/clients", label: "Clients" },
+  { href: "/settings", label: "Settings" },
 ] as const;
 
 export function OrgPrimaryNav(props: { currentPath: string }) {

@@ -13,7 +13,7 @@ export default function ResetPasswordPage(): ReactElement {
         </p>
       </div>
       <p className="text-sm">
-        <Link href="/login" className="text-accent underline-offset-2 hover:underline">
+        <Link href="/" className="text-accent underline-offset-2 hover:underline">
           Go to sign in
         </Link>
       </p>

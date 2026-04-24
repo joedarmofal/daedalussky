@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
+
+import AuthGuard from "@/components/AuthGuard";
+import { OrgProvider } from "@/components/org/OrgProvider";
+import { SessionCookieSync } from "@/components/SessionCookieSync";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -45,7 +51,20 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <SessionCookieSync />
+        <Suspense
+          fallback={
+            <div className="flex min-h-[40vh] flex-1 items-center justify-center text-sm text-neutral-500">
+              Checking sign-in…
+            </div>
+          }
+        >
+          <AuthGuard>
+            <OrgProvider>{children}</OrgProvider>
+          </AuthGuard>
+        </Suspense>
+      </body>
     </html>
   );
 }

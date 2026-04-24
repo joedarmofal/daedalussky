@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { authedFetch } from "@/lib/authed-fetch";
+
 type SurveyLink = {
   id: string;
   tripNumber: string;
@@ -24,7 +26,7 @@ export function PulseCheckSurveyForm(props: { token: string }) {
 
   useEffect(() => {
     async function load() {
-      const res = await fetch(`/api/pulse-check/public/${props.token}`, { cache: "no-store" });
+      const res = await authedFetch(`/api/pulse-check/public/${props.token}`, { cache: "no-store" });
       const body = (await res.json()) as { link?: SurveyLink; error?: string };
       if (!res.ok || !body.link) {
         setError(body.error ?? "Survey link not available.");
@@ -41,7 +43,7 @@ export function PulseCheckSurveyForm(props: { token: string }) {
     event.preventDefault();
     setSaving(true);
     setError(null);
-    const res = await fetch(`/api/pulse-check/public/${props.token}`, {
+    const res = await authedFetch(`/api/pulse-check/public/${props.token}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

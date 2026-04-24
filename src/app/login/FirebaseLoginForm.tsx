@@ -1,11 +1,18 @@
 "use client";
 
-import Link from "next/link";
 import type { FormEvent, ReactElement } from "react";
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
+import { useSearchParams } from "next/navigation";
 
 import { getFirebaseAuth } from "@firebase-config";
+
+function postLoginDestination(redirectParam: string | null): string {
+  if (redirectParam && redirectParam.startsWith("/") && !redirectParam.startsWith("//")) {
+    return redirectParam;
+  }
+  return "/mission-control";
+}
 
 
 function getFirebaseAuthErrorMessage(err: unknown): string {
@@ -66,6 +73,7 @@ function getFirebaseAuthErrorMessage(err: unknown): string {
 }
 
 export function FirebaseLoginForm(): ReactElement {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -77,8 +85,21 @@ export function FirebaseLoginForm(): ReactElement {
     setPending(true);
     try {
       const auth = getFirebaseAuth();
-      await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
-      window.location.href = "/mission-control";
+      const cred = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+      const idToken = await cred.user.getIdToken();
+      const sessionRes = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ idToken }),
+      });
+      if (!sessionRes.ok) {
+        const body = (await sessionRes.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ?? "Could not establish a server session. Check Firebase Admin env.");
+        return;
+      }
+      const next = postLoginDestination(searchParams.get("redirect"));
+      window.location.href = next;
     } catch (err: unknown) {
       setError(getFirebaseAuthErrorMessage(err));
     } finally {
@@ -152,11 +173,7 @@ export function FirebaseLoginForm(): ReactElement {
           </button>
         </form>
 
-        <p className="text-center text-sm text-zinc-500">
-          <Link href="/" className="text-cyan-400/90 underline-offset-4 hover:underline">
-            ← Back to home
-          </Link>
-        </p>
+        <p className="text-center font-mono text-xs text-zinc-600">Daedalus Sky · secure access</p>
       </div>
     </main>
   );
