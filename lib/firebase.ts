@@ -36,19 +36,23 @@ function parseFirebaseWebConfig(): FirebaseWebInitResult {
   const messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
   const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
 
-  if (apiKey && authDomain && projectId && storageBucket && messagingSenderId && appId) {
-    return {
-      ok: true,
-      config: {
-        apiKey,
-        authDomain,
-        projectId,
-        storageBucket,
-        messagingSenderId,
-        appId,
-      },
-    };
-  }
+  // NUCLEAR OPTION: Force these strings directly in the initialization
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC9_iR3Jxag5HcOplJWGR...", // Paste actual key from next.config.ts
+    authDomain: "daedalus-sky.firebaseapp.com",
+    projectId: "daedalus-sky",
+    storageBucket: "daedalus-sky.firebasestorage.app",
+    messagingSenderId: "635976516767",
+    appId: "1:635976516767:web:e512c3fa..." // Paste actual ID from next.config.ts
+  };
+
+  // Initialize Firebase
+  const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  export { app, auth, db };
 
   const bundled = getPublicEnv("NEXT_PUBLIC_FIREBASE_CONFIG").trim();
   if (bundled) {
