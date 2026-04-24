@@ -29,12 +29,12 @@ export type FirebaseWebInitResult =
   | { ok: false; missingKeys: string[] };
 
 function parseFirebaseWebConfig(): FirebaseWebInitResult {
-  const apiKey = getPublicEnv("NEXT_PUBLIC_FIREBASE_API_KEY");
-  const authDomain = getPublicEnv("NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN");
-  const projectId = getPublicEnv("NEXT_PUBLIC_FIREBASE_PROJECT_ID");
-  const storageBucket = getPublicEnv("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET");
-  const messagingSenderId = getPublicEnv("NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID");
-  const appId = getPublicEnv("NEXT_PUBLIC_FIREBASE_APP_ID");
+  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+  const messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
+  const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
 
   if (apiKey && authDomain && projectId && storageBucket && messagingSenderId && appId) {
     return {
