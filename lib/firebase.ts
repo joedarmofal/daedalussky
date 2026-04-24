@@ -2,6 +2,10 @@ import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 
+import { getPublicEnv } from "@/lib/public-env";
+
+console.log("Initializing Services...", { service: "firebase-web" });
+
 export type FirebaseWebConfig = {
   apiKey: string;
   authDomain: string;
@@ -11,94 +15,123 @@ export type FirebaseWebConfig = {
   appId: string;
 };
 
-function loadWebConfigFromEnv(): FirebaseWebConfig {
-  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
-  const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-  const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-  const messagingSenderId = process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
-  const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
+const REQUIRED_WEB_KEYS = [
+  "NEXT_PUBLIC_FIREBASE_API_KEY",
+  "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
+  "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
+  "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
+  "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+  "NEXT_PUBLIC_FIREBASE_APP_ID",
+] as const;
 
-  if (
-    apiKey &&
-    authDomain &&
-    projectId &&
-    storageBucket &&
-    messagingSenderId &&
-    appId
-  ) {
+export type FirebaseWebInitResult =
+  | { ok: true; config: FirebaseWebConfig }
+  | { ok: false; missingKeys: string[] };
+
+function parseFirebaseWebConfig(): FirebaseWebInitResult {
+  const apiKey = getPublicEnv("NEXT_PUBLIC_FIREBASE_API_KEY");
+  const authDomain = getPublicEnv("NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN");
+  const projectId = getPublicEnv("NEXT_PUBLIC_FIREBASE_PROJECT_ID");
+  const storageBucket = getPublicEnv("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET");
+  const messagingSenderId = getPublicEnv("NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID");
+  const appId = getPublicEnv("NEXT_PUBLIC_FIREBASE_APP_ID");
+
+  if (apiKey && authDomain && projectId && storageBucket && messagingSenderId && appId) {
     return {
-      apiKey,
-      authDomain,
-      projectId,
-      storageBucket,
-      messagingSenderId,
-      appId,
+      ok: true,
+      config: {
+        apiKey,
+        authDomain,
+        projectId,
+        storageBucket,
+        messagingSenderId,
+        appId,
+      },
     };
   }
 
-  const bundled = process.env.NEXT_PUBLIC_FIREBASE_CONFIG?.trim();
+  const bundled = getPublicEnv("NEXT_PUBLIC_FIREBASE_CONFIG").trim();
   if (bundled) {
     try {
-      return JSON.parse(bundled) as FirebaseWebConfig;
+      const parsed = JSON.parse(bundled) as Partial<FirebaseWebConfig>;
+      if (
+        parsed.apiKey &&
+        parsed.authDomain &&
+        parsed.projectId &&
+        parsed.storageBucket &&
+        parsed.messagingSenderId &&
+        parsed.appId
+      ) {
+        return { ok: true, config: parsed as FirebaseWebConfig };
+      }
     } catch {
-      throw new Error("NEXT_PUBLIC_FIREBASE_CONFIG must be valid JSON.");
+      const missing = [...REQUIRED_WEB_KEYS].filter((k) => !getPublicEnv(k));
+      return { ok: false, missingKeys: [...missing, "NEXT_PUBLIC_FIREBASE_CONFIG (invalid JSON)"] };
     }
   }
 
-  throw new Error(
-    "Missing Firebase web config. Set NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, NEXT_PUBLIC_FIREBASE_PROJECT_ID, NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET, NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID, NEXT_PUBLIC_FIREBASE_APP_ID (or NEXT_PUBLIC_FIREBASE_CONFIG as JSON).",
-  );
+  const missingKeys = [...REQUIRED_WEB_KEYS].filter((k) => !getPublicEnv(k));
+  return { ok: false, missingKeys };
+}
+
+const firebaseWebInit: FirebaseWebInitResult = parseFirebaseWebConfig();
+
+if (!firebaseWebInit.ok && typeof console !== "undefined") {
+  console.error("Firebase web missing critical keys:", firebaseWebInit.missingKeys);
+}
+
+export function isFirebaseWebConfigured(): boolean {
+  return firebaseWebInit.ok;
+}
+
+export function getFirebaseWebInitResult(): FirebaseWebInitResult {
+  return firebaseWebInit;
+}
+
+export function getMissingFirebaseWebEnvNames(): string[] {
+  return firebaseWebInit.ok ? [] : [...firebaseWebInit.missingKeys];
 }
 
 let browserApp: FirebaseApp | null = null;
+let browserAuth: Auth | null = null;
+let browserDb: Firestore | null = null;
 
-/** Firebase web app (browser only). */
-export function getFirebaseApp(): FirebaseApp {
+/** Firebase web app (browser only). Returns null when env is not configured. */
+export function getFirebaseApp(): FirebaseApp | null {
   if (typeof window === "undefined") {
-    throw new Error("Firebase web SDK must only be used in the browser.");
+    return null;
+  }
+  if (!firebaseWebInit.ok) {
+    return null;
   }
   if (!browserApp) {
-    browserApp =
-      getApps().length > 0 ? getApps()[0]! : initializeApp(loadWebConfigFromEnv());
+    browserApp = getApps().length > 0 ? getApps()[0]! : initializeApp(firebaseWebInit.config);
   }
   return browserApp;
 }
 
-let browserAuth: Auth | null = null;
-let browserDb: Firestore | null = null;
-
-/** Shared Firebase Auth instance (browser only). */
-export function getFirebaseAuth(): Auth {
+/** Shared Firebase Auth instance (browser only). Null when not configured. */
+export function getFirebaseAuth(): Auth | null {
+  const app = getFirebaseApp();
+  if (!app) {
+    return null;
+  }
   if (!browserAuth) {
-    browserAuth = getAuth(getFirebaseApp());
+    browserAuth = getAuth(app);
   }
   return browserAuth;
 }
 
-/** Shared Cloud Firestore instance (browser only). */
-export function getFirebaseDb(): Firestore {
+/** Shared Cloud Firestore instance (browser only). Null when not configured. */
+export function getFirebaseDb(): Firestore | null {
+  const app = getFirebaseApp();
+  if (!app) {
+    return null;
+  }
   if (!browserDb) {
-    browserDb = getFirestore(getFirebaseApp());
+    browserDb = getFirestore(app);
   }
   return browserDb;
 }
 
-/**
- * Lazily initialized client: use `firebase.auth` / `firebase.db` in client code
- * (e.g. event handlers), not during SSR.
- */
-export const firebase = {
-  get auth(): Auth {
-    return getFirebaseAuth();
-  },
-  get db(): Firestore {
-    return getFirebaseDb();
-  },
-};
-
-/** Same as `getFirebaseAuth` / `firebase.auth`. */
-export { getFirebaseAuth as auth, getFirebaseDb as db };
-
-/** Stable alias for code that expects this name. */
-export const firebaseAuth = getFirebaseAuth;
+export { getFirebaseAuth as firebaseAuth };

@@ -62,7 +62,7 @@ export function OrgProvider({ children }: { children: ReactNode }) {
 
   const loadMe = useCallback(async () => {
     const auth = getFirebaseAuth();
-    if (!auth.currentUser) {
+    if (!auth || !auth.currentUser) {
       setMember(null);
       setOrganization(null);
       setError(null);
@@ -98,6 +98,10 @@ export function OrgProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const auth = getFirebaseAuth();
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
     const unsub = onAuthStateChanged(auth, () => {
       void loadMe();
     });

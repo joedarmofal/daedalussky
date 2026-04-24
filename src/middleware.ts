@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { FIREBASE_SESSION_COOKIE_NAME } from "@/lib/firebase-session-cookie";
+import { getPublicEnv } from "@/lib/public-env";
 import { verifyFirebaseIdToken, verifyFirebaseSessionCookie } from "@/lib/verify-firebase-jwt-edge";
 
 function isStaticAsset(pathname: string): boolean {
@@ -60,7 +61,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     return NextResponse.next();
   }
 
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const projectId = getPublicEnv("NEXT_PUBLIC_FIREBASE_PROJECT_ID");
   if (!projectId) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "NEXT_PUBLIC_FIREBASE_PROJECT_ID is not set" }, { status: 500 });

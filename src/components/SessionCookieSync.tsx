@@ -12,6 +12,9 @@ import { getFirebaseAuth } from "@firebase-config";
 export function SessionCookieSync(): null {
   useEffect(() => {
     const auth = getFirebaseAuth();
+    if (!auth) {
+      return;
+    }
     return onIdTokenChanged(auth, async (user) => {
       if (!user) {
         return;

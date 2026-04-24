@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { signOut } from "firebase/auth";
 
 import { authedFetch } from "@/lib/authed-fetch";
+import { getPublicEnv } from "@/lib/public-env";
 import { getFirebaseAuth } from "@firebase-config";
 import { faaTfrListUrl } from "@/lib/mission-control/tfr-feed";
 import { wmoWeatherLabel } from "@/lib/mission-control/wmo-weather";
@@ -47,12 +48,8 @@ const RadarMap = dynamic(
   },
 );
 
-const DEFAULT_LAT = Number(
-  process.env.NEXT_PUBLIC_DEFAULT_WEATHER_LAT ?? "39.5",
-);
-const DEFAULT_LON = Number(
-  process.env.NEXT_PUBLIC_DEFAULT_WEATHER_LON ?? "-98.35",
-);
+const DEFAULT_LAT = Number(getPublicEnv("NEXT_PUBLIC_DEFAULT_WEATHER_LAT") || "39.5");
+const DEFAULT_LON = Number(getPublicEnv("NEXT_PUBLIC_DEFAULT_WEATHER_LON") || "-98.35");
 
 const BASE_SCHEDULES: {
   callSign: string;
@@ -339,7 +336,10 @@ export function MissionControlDashboard(): ReactElement {
     } catch {
       // Still sign out client-side so the UI cannot stay "logged in" without Firebase.
     }
-    await signOut(getFirebaseAuth());
+    const auth = getFirebaseAuth();
+    if (auth) {
+      await signOut(auth);
+    }
     window.location.href = "/";
   }
 

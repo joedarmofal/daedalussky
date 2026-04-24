@@ -8,6 +8,8 @@ import { cert, getApps, initializeApp, type App, type ServiceAccount } from "fir
 import { getAuth, type Auth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 
+console.log("Initializing Services...", { service: "firebase-admin" });
+
 function parseServiceAccountFromEnv(): ServiceAccount {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON?.trim();
   if (!raw) {

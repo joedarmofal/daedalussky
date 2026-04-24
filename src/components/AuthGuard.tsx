@@ -4,7 +4,12 @@ import { onAuthStateChanged } from "firebase/auth";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 
-import { getFirebaseAuth } from "@firebase-config";
+import {
+  getFirebaseAuth,
+  getMissingFirebaseWebEnvNames,
+  isFirebaseWebConfigured,
+} from "@firebase-config";
+import { FirebaseConfigurationError } from "@/components/FirebaseConfigurationError";
 
 /** Password reset and similar — no session required. */
 function isPublicAnonPath(pathname: string | null): boolean {
@@ -59,14 +64,21 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const queryString = searchParams.toString();
 
   const [allow, setAllow] = useState(anonPublic);
+  const firebaseConfigured = isFirebaseWebConfigured();
 
   useEffect(() => {
+    if (!firebaseConfigured) {
+      return;
+    }
     if (anonPublic) {
       setAllow(true);
       return;
     }
 
     const auth = getFirebaseAuth();
+    if (!auth) {
+      return;
+    }
     const unsub = onAuthStateChanged(auth, (user) => {
       if (loginPath) {
         if (user) {
@@ -90,7 +102,11 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     });
 
     return () => unsub();
-  }, [anonPublic, loginPath, pathname, queryString, router, searchParams]);
+  }, [anonPublic, firebaseConfigured, loginPath, pathname, queryString, router, searchParams]);
+
+  if (!firebaseConfigured) {
+    return <FirebaseConfigurationError missingKeys={getMissingFirebaseWebEnvNames()} />;
+  }
 
   if (!allow) {
     return (

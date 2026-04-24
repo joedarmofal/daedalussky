@@ -5,7 +5,13 @@ import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useSearchParams } from "next/navigation";
 
-import { getFirebaseAuth } from "@firebase-config";
+import {
+  getFirebaseAuth,
+  getMissingFirebaseWebEnvNames,
+  isFirebaseWebConfigured,
+} from "@firebase-config";
+import { FirebaseConfigurationError } from "@/components/FirebaseConfigurationError";
+import { getNodeEnv } from "@/lib/public-env";
 
 function postLoginDestination(redirectParam: string | null): string {
   if (redirectParam && redirectParam.startsWith("/") && !redirectParam.startsWith("//")) {
@@ -31,7 +37,7 @@ function getFirebaseAuthErrorMessage(err: unknown): string {
       ? (err as { message: string }).message
       : "";
 
-  if (process.env.NODE_ENV === "development" && code) {
+  if (getNodeEnv() === "development" && code) {
     // Full code + message helps distinguish config vs credential issues (IAM rarely affects this flow).
     console.error("[Firebase Auth]", code, rawMessage);
   }
@@ -85,6 +91,10 @@ export function FirebaseLoginForm(): ReactElement {
     setPending(true);
     try {
       const auth = getFirebaseAuth();
+      if (!auth) {
+        setError("Firebase is not configured for this deployment.");
+        return;
+      }
       const cred = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
       const idToken = await cred.user.getIdToken();
       const sessionRes = await fetch("/api/auth/session", {
@@ -105,6 +115,10 @@ export function FirebaseLoginForm(): ReactElement {
     } finally {
       setPending(false);
     }
+  }
+
+  if (!isFirebaseWebConfigured()) {
+    return <FirebaseConfigurationError missingKeys={getMissingFirebaseWebEnvNames()} />;
   }
 
   return (

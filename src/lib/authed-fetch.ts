@@ -10,7 +10,8 @@ export async function authedFetch(
   init?: RequestInit,
 ): Promise<Response> {
   const auth = getFirebaseAuth();
-  const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+  const token =
+    auth && auth.currentUser ? await auth.currentUser.getIdToken() : null;
   const headers = new Headers(init?.headers);
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
