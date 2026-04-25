@@ -3,6 +3,7 @@ import "server-only";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
+import { isAuthDevBypassEnabled } from "@/lib/auth-dev-bypass";
 import { getDb } from "@/db";
 import { members } from "@/db/schema/members";
 import { verifyFirebaseIdToken } from "@firebase-admin";
@@ -22,27 +23,43 @@ export async function getRequesterFromRequest(request: Request): Promise<
   const authHeader = request.headers.get("authorization");
   const token =
     authHeader?.startsWith("Bearer ") ? authHeader.slice("Bearer ".length).trim() : null;
-  if (!token) {
-    return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
-  }
 
-  let uid: string;
-  try {
-    const decoded = await verifyFirebaseIdToken(token);
-    uid = decoded.uid;
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "";
-    if (message.includes("FIREBASE_SERVICE_ACCOUNT_JSON")) {
+  let uid: string | null = null;
+
+  if (token) {
+    try {
+      const decoded = await verifyFirebaseIdToken(token);
+      uid = decoded.uid;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      if (message.includes("FIREBASE_SERVICE_ACCOUNT_JSON")) {
+        return {
+          error: NextResponse.json(
+            { error: "Server Firebase admin is not configured." },
+            { status: 503 },
+          ),
+        };
+      }
+      return {
+        error: NextResponse.json({ error: "Invalid or expired token." }, { status: 401 }),
+      };
+    }
+  } else if (isAuthDevBypassEnabled()) {
+    const devUid = process.env.AUTH_DEV_BYPASS_FIREBASE_UID?.trim();
+    if (!devUid) {
       return {
         error: NextResponse.json(
-          { error: "Server Firebase admin is not configured." },
+          {
+            error:
+              "Dev auth bypass is on but AUTH_DEV_BYPASS_FIREBASE_UID is not set. Set it to a Firebase Auth UID that exists in members.auth_subject.",
+          },
           { status: 503 },
         ),
       };
     }
-    return {
-      error: NextResponse.json({ error: "Invalid or expired token." }, { status: 401 }),
-    };
+    uid = devUid;
+  } else {
+    return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
   }
 
   const db = getDb();

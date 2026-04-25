@@ -4,13 +4,19 @@ import { onIdTokenChanged } from "firebase/auth";
 import { useEffect } from "react";
 
 import { getFirebaseAuth } from "@firebase-config";
+import { isAuthDevBypassEnabled } from "@/lib/auth-dev-bypass";
 
 /**
  * Refreshes the httpOnly Firebase session cookie whenever the ID token rotates,
  * so middleware and API auth stay aligned with the client session.
  */
 export function SessionCookieSync(): null {
+  const authDevBypass = isAuthDevBypassEnabled();
+
   useEffect(() => {
+    if (authDevBypass) {
+      return;
+    }
     const auth = getFirebaseAuth();
     if (!auth) {
       return;
@@ -31,7 +37,7 @@ export function SessionCookieSync(): null {
         // Non-fatal; user may retry by navigating or signing in again.
       }
     });
-  }, []);
+  }, [authDevBypass]);
 
   return null;
 }

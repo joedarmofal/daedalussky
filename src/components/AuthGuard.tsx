@@ -10,6 +10,7 @@ import {
   isFirebaseWebConfigured,
 } from "@firebase-config";
 import { FirebaseConfigurationError } from "@/components/FirebaseConfigurationError";
+import { isAuthDevBypassEnabled } from "@/lib/auth-dev-bypass";
 
 /** Password reset and similar — no session required. */
 function isPublicAnonPath(pathname: string | null): boolean {
@@ -59,6 +60,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const authDevBypass = isAuthDevBypassEnabled();
   const anonPublic = isPublicAnonPath(pathname);
   const loginPath = isLoginPath(pathname);
   const queryString = searchParams.toString();
@@ -68,6 +70,9 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const routeAllowsAnonymous = anonPublic;
 
   useEffect(() => {
+    if (authDevBypass) {
+      return;
+    }
     if (!firebaseConfigured) {
       return;
     }
@@ -102,7 +107,20 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     });
 
     return () => unsub();
-  }, [firebaseConfigured, loginPath, pathname, queryString, routeAllowsAnonymous, router, searchParams]);
+  }, [
+    authDevBypass,
+    firebaseConfigured,
+    loginPath,
+    pathname,
+    queryString,
+    routeAllowsAnonymous,
+    router,
+    searchParams,
+  ]);
+
+  if (authDevBypass) {
+    return <>{children}</>;
+  }
 
   if (!firebaseConfigured) {
     return <FirebaseConfigurationError missingKeys={getMissingFirebaseWebEnvNames()} />;

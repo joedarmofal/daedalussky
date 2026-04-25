@@ -16,6 +16,7 @@
     "drizzle-orm": "^0.45.2",
     "firebase": "^12.12.1",
     "firebase-admin": "^13.8.0",
+    "firebase-functions": "^7.2.5",
     "jose": "^6.2.2",
     "leaflet": "^1.9.4",
     "next": "16.2.4",

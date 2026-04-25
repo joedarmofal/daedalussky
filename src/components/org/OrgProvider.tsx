@@ -13,6 +13,7 @@ import {
 
 import { getFirebaseAuth } from "@firebase-config";
 import { authedFetch } from "@/lib/authed-fetch";
+import { isAuthDevBypassEnabled } from "@/lib/auth-dev-bypass";
 import { isOrgAdminRole } from "@/lib/org-roles";
 
 export type OrgMemberProfile = {
@@ -55,14 +56,17 @@ type OrgContextValue = {
 const OrgContext = createContext<OrgContextValue | null>(null);
 
 export function OrgProvider({ children }: { children: ReactNode }) {
-  const [loading, setLoading] = useState(() => getFirebaseAuth() !== null);
+  const [loading, setLoading] = useState(
+    () => isAuthDevBypassEnabled() || getFirebaseAuth() !== null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [member, setMember] = useState<OrgMemberProfile | null>(null);
   const [organization, setOrganization] = useState<OrgOrganization | null>(null);
 
   const loadMe = useCallback(async () => {
+    const bypass = isAuthDevBypassEnabled();
     const auth = getFirebaseAuth();
-    if (!auth || !auth.currentUser) {
+    if (!bypass && (!auth || !auth.currentUser)) {
       setMember(null);
       setOrganization(null);
       setError(null);
@@ -97,6 +101,12 @@ export function OrgProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (isAuthDevBypassEnabled()) {
+      queueMicrotask(() => {
+        void loadMe();
+      });
+      return;
+    }
     const auth = getFirebaseAuth();
     if (!auth) {
       return;

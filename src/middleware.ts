@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+import { isAuthDevBypassEnabled } from "@/lib/auth-dev-bypass";
 import { FIREBASE_SESSION_COOKIE_NAME } from "@/lib/firebase-session-cookie";
 import { getPublicEnv } from "@/lib/public-env";
 import { verifyFirebaseIdToken, verifyFirebaseSessionCookie } from "@/lib/verify-firebase-jwt-edge";
@@ -58,6 +59,10 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
   if (isStaticAsset(pathname)) {
+    return NextResponse.next();
+  }
+
+  if (isAuthDevBypassEnabled()) {
     return NextResponse.next();
   }
 
